@@ -94,6 +94,7 @@ def main():
 
                 # Move to the next question
                 st.session_state.current_question_idx += 1
+                st.rerun()
 
     # When all questions are answered
     if st.session_state.current_question_idx == len(questions):
