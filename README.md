@@ -9,10 +9,12 @@ Welkom bij **"De Kennisuitdaging"**! Dit is een leuk AI-kennisquizspel, speciaal
 1. Python downloaden en installeren: Bezoek de officiële Python-website om de nieuwste versie van het Python-installatieprogramma voor Windows te downloaden, voer het installatieprogramma uit en zorg ervoor dat de optie "Python aan PATH toevoegen" is aangevinkt. 
 2. Als Python is geïnstalleerd, wordt pip meestal mee geïnstalleerd. U kunt controleren of het is geïnstalleerd vanaf de opdrachtregel: `pip -- version`
 3. `pip install groq`
+4. `pip install streamlit`
 
 - MacOS
 1. macOS wordt meestal geleverd met Python 2.x vooraf geïnstalleerd, en je kunt de nieuwste Python 3 installeren via Homebrew: `brew install python`
 2. `pip3 install groq`
+3. `pip3 install streamlit`
 
 ## Kenmerken van het spel:
 - Willekeurig gegenereerde vragen, waardoor elk spel uniek is!
