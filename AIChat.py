@@ -1,6 +1,8 @@
 import streamlit as st
 from groq import Groq
 from pygame import mixer
+mixer.init()
+import os
 import re
 
 # Initialize Groq client
@@ -143,7 +145,7 @@ def main():
 
         if st.button("Submit Answer"):
             if selected_option:
-                sound = mixer.Sound("submit.mp3")
+                sound = mixer.Sound("audio/submit.mp3")
                 sound.play()
                 
                 # Record the user's answer
@@ -166,12 +168,12 @@ def main():
                 st.rerun()
                 
         if selected_option:
-            sound = mixer.Sound("option.mp3")
+            sound = mixer.Sound("audio/option.mp3")
             sound.play()
 
     # After all questions are answered
     if st.session_state.current_question_idx == len(questions):
-        sound = mixer.Sound("end-game.mp3")
+        sound = mixer.Sound("audio/end-game.mp3")
         sound.play()
         st.markdown("### 🎉 Game Over!")
         correct_count = st.session_state.correctness.count("Correct")
