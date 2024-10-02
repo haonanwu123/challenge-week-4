@@ -1,11 +1,13 @@
 import streamlit as st
 from groq import Groq
+import time
 from pygame import mixer
-mixer.init()
 import re
 
 # Initialize Groq client
 client = Groq(api_key="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")  # Replace with your actual API key
+
+mixer.init()
 
 def generate_questions(num_questions=5):
     """
@@ -89,6 +91,11 @@ def main():
         st.session_state.correctness = []  # Stores "Correct" or the correct answer
         st.session_state.explanations = {}  # Stores explanations for incorrect answers
         st.session_state.current_question_idx = 0
+        st.session_state.is_sound_played = [False]*5
+        st.session_state.selected_options = [None]*5
+        st.session_state.running = True
+        st.session_state.start_time = time.time()
+        st.session_state.elapsed_time = 0
 
     questions = st.session_state.questions
 
@@ -146,7 +153,6 @@ def main():
             if selected_option:
                 sound = mixer.Sound("audio/submit.mp3")
                 sound.play()
-                
                 # Record the user's answer
                 st.session_state.user_answers.append(selected_option)
 
@@ -156,22 +162,24 @@ def main():
                     st.session_state.correctness.append("Correct")
                 else:
                     st.session_state.correctness.append(correct_answer)
-                    idx = st.session_state.current_question_idx
-                    if idx not in st.session_state.explanations:
+                    if current_idx not in st.session_state.explanations:
                         # Fetch explanation
-                        explanation = get_explanation(questions[idx], correct_answer)
-                        st.session_state.explanations[idx] = explanation
+                        explanation = get_explanation(questions[current_idx], correct_answer)
+                        st.session_state.explanations[current_idx] = explanation
 
                 # Move to the next question
                 st.session_state.current_question_idx += 1
                 st.rerun()
-                
-        if selected_option:
+
+        if selected_option and (not st.session_state.is_sound_played[current_idx-1] or selected_option != st.session_state.selected_options):
+            st.session_state.is_sound_played[current_idx-1] = True
+            st.session_state.selected_options = selected_option
             sound = mixer.Sound("audio/option.mp3")
             sound.play()
 
     # After all questions are answered
     if st.session_state.current_question_idx == len(questions):
+        st.session_state.running = False
         sound = mixer.Sound("audio/end-game.mp3")
         sound.play()
         st.markdown("### 🎉 Game Over!")
@@ -180,8 +188,14 @@ def main():
         accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
 
         st.markdown(f"**Your accuracy:** {correct_count}/{total_questions} ({accuracy:.2f}%)")
-
+        st.markdown(f"**Total time: {st.session_state.elapsed_time:.1f} seconds**")
         st.markdown("**Thank you for playing!**")
+
+    if st.session_state.running:
+        st.session_state.elapsed_time = time.time() - st.session_state.start_time
+        st.write(f"Elapsed time: {st.session_state.elapsed_time:.1f} seconds")
+        time.sleep(0.1)
+        st.rerun()
 
 if __name__ == "__main__":
     main()
