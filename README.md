@@ -10,11 +10,13 @@ Welkom bij **"De Kennisuitdaging"**! Dit is een leuk AI-kennisquizspel, speciaal
 2. Als Python is geïnstalleerd, wordt pip meestal mee geïnstalleerd. U kunt controleren of het is geïnstalleerd vanaf de opdrachtregel: `pip -- version`
 3. `pip install groq`
 4. `pip install streamlit`
+5. `pip install pygame`
 
 - MacOS
 1. macOS wordt meestal geleverd met Python 2.x vooraf geïnstalleerd, en je kunt de nieuwste Python 3 installeren via Homebrew: `brew install python`
 2. `pip3 install groq`
 3. `pip3 install streamlit`
+4. `pip3 install pygame`
 
 ## Kenmerken van het spel:
 - Willekeurig gegenereerde vragen, waardoor elk spel uniek is!
