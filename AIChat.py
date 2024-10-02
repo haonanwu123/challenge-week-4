@@ -2,7 +2,6 @@ import streamlit as st
 from groq import Groq
 from pygame import mixer
 mixer.init()
-import os
 import re
 
 # Initialize Groq client
