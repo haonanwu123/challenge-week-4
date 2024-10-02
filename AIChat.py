@@ -1,118 +1,193 @@
 import streamlit as st
 from groq import Groq
+import re
 
-# Create Groq client
-client = Groq(api_key="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")
+# Initialize Groq client
+client = Groq(api_key="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")  # Replace with your actual API key
 
 def generate_questions(num_questions=5):
+    """
+    Generates a list of multiple-choice questions using the Groq API.
+    """
     questions = []
     for _ in range(num_questions):
-        prompt_question_with_context = "Ask a multiple choice question about history, science, or pop culture. Provide options A, B, C, D."
-
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt_question_with_context,
-                }
-            ],
+        prompt = "Ask a multiple choice question about history, science, or pop culture. Provide options A, B, C, D."
+        
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
             model="llama3-8b-8192",
         )
-
-        # Get the question and options
-        prev_question = chat_completion.choices[0].message.content
-        questions.append(prev_question)
+        
+        question = response.choices[0].message.content.strip()
+        questions.append(question)
     return questions
 
-def check_answers(questions, user_answers):
-    correct_answers = []
-    explanations = []
+def is_correct(question, user_answer):
+    """
+    Checks if the user's answer is correct.
+    Returns a tuple (is_correct: bool, correct_answer: str).
+    """
+    prompt = (
+        f"Question: {question}\n"
+        f"My answer: {user_answer}\n"
+        f"If the answer is correct, output 'Correct'. "
+        f"If incorrect, output 'Incorrect' and provide the correct answer."
+    )
     
-    for idx, (question, user_answer) in enumerate(zip(questions, user_answers)):
-        prompt_question = f"Question: {question}\nMy answer: {user_answer}\nIf the answer is correct, output 'Correct', else output 'Incorrect' and provide the correct answer."
-        
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt_question,
-                }
-            ],
-            model="llama3-8b-8192",
-        )
-
-        outcome = chat_completion.choices[0].message.content
-        # Determine if the answer is correct
-        if "Correct" in outcome:
-            correct_answers.append("Correct")
-            explanations.append("No explanation needed.")  # Placeholder for explanations
-        else:
+    response = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model="llama3-8b-8192",
+    )
+    
+    outcome = response.choices[0].message.content.strip()
+    
+    if "Correct" in outcome:
+        return True, "Correct"
+    else:
+        # Attempt to extract the correct answer
+        correct_answer = "Unknown"
+        try:
+            if "The correct answer is" in outcome:
+                correct_answer = outcome.split("The correct answer is ")[1].split(".")[0].strip()
+            elif "the correct answer is" in outcome:
+                correct_answer = outcome.split("the correct answer is ")[1].split(".")[0].strip()
+            else:
+                # Handle other possible formats
+                correct_answer = outcome.split(":")[1].split("\n")[0].strip()
+        except IndexError:
             correct_answer = "Unknown"
-            explanation = ""
+        
+        return False, correct_answer
 
-            try:
-                # Attempt to parse the correct answer from the AI's response
-                if "The correct answer is" in outcome:
-                    correct_answer = outcome.split("The correct answer is ")[1].strip().split(".")[0]
-                correct_answers.append(correct_answer.strip())
-                explanations.append(outcome.strip())  # Store the full explanation
-            except Exception as e:
-                correct_answers.append(correct_answer)  # Append the default value
-                explanations.append("No explanation available.")  # Default explanation
+def get_explanation(question, correct_answer):
+    """
+    Retrieves a detailed explanation for the correct answer.
+    """
+    prompt = (
+        f"Question: {question}\n"
+        f"The correct answer is: {correct_answer}.\n"
+        f"Please provide a detailed explanation for why this is the correct answer."
+    )
     
-    return correct_answers, explanations
+    response = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model="llama3-8b-8192",
+    )
+    
+    explanation = response.choices[0].message.content.strip()
+    return explanation
 
-# Streamlit application
 def main():
-    st.title("Quiz Game")
-    
-    if 'questions' not in st.session_state:
+    st.title("📚 Quiz Game")
+
+    # Initialize session state variables
+    if "questions" not in st.session_state:
         st.session_state.questions = generate_questions()
         st.session_state.user_answers = []
+        st.session_state.correctness = []  # Stores "Correct" or the correct answer
+        st.session_state.explanations = {}  # Stores explanations for incorrect answers
         st.session_state.current_question_idx = 0
-        st.session_state.correct_answers = []
-        st.session_state.explanations = []
-    
+        st.session_state.show_explanations = False  # Flag for showing explanations
+
     questions = st.session_state.questions
 
-    # Show the current question
+    st.write("Welcome to the Quiz Game! Answer the following multiple-choice questions:")
+
+    # Display all previously answered questions
+    for idx in range(st.session_state.current_question_idx):
+        question = questions[idx]
+        user_answer = st.session_state.user_answers[idx]
+        correctness = st.session_state.correctness[idx]
+
+        st.markdown(f"**Question {idx + 1}:** {question}")
+        st.markdown(f"Your answer: **{user_answer}**, Correct answer: **{correctness}**")
+
+        if correctness != "Correct":
+            # Use an expander to show explanations when available
+            if st.session_state.show_explanations and idx in st.session_state.explanations:
+                with st.expander(f"Explanation for Question {idx + 1}"):
+                    st.write(st.session_state.explanations[idx])
+            else:
+                with st.expander(f"Explanation for Question {idx + 1}"):
+                    st.write("Explanation will appear here after you click the button below.")
+
+    # Display the current question
     if st.session_state.current_question_idx < len(questions):
-        question = questions[st.session_state.current_question_idx]
-        st.write(f"**Question {st.session_state.current_question_idx + 1}:** {question}")
+        current_idx = st.session_state.current_question_idx
+        current_question = questions[current_idx]
+
+        st.markdown(f"**Question {current_idx + 1}:** {current_question}")
+
+        # Extract options from the question text
+        options = re.findall(r"[A-D]\)\s.*", current_question)
+        if not options:
+            st.error("Error parsing the question options. Please check the question format.")
+            st.stop()
         
-        # Input for the answer
-        answer = st.radio("Choose your answer:", options=["A", "B", "C", "D"])
+        options = [opt.split(")", 1)[1].strip() for opt in options]
+        options = [opt for opt in options if opt]  # Remove empty strings
+
+        # Ensure there are exactly 4 options
+        if len(options) != 4:
+            st.error("Each question must have exactly four options (A, B, C, D).")
+            st.stop()
+
+        # Map options back to their labels
+        option_labels = ["A", "B", "C", "D"]
+        option_dict = dict(zip(option_labels, options))
+
+        # Radio button for selecting an answer
+        selected_option = st.radio(
+            "Choose your answer:",
+            options=option_labels,
+            index= None,
+            format_func=lambda x: f"{x}) {option_dict[x]}"
+        )
 
         if st.button("Submit Answer"):
-            if answer:
-                st.session_state.user_answers.append(answer)
-                correct_answers, explanations = check_answers(questions, st.session_state.user_answers)
+            if selected_option:
+                # Record the user's answer
+                st.session_state.user_answers.append(selected_option)
 
-                # Update state
-                st.session_state.correct_answers = correct_answers
-                st.session_state.explanations = explanations
+                # Check if the answer is correct
+                correct, correct_answer = is_correct(current_question, selected_option)
+                if correct:
+                    st.session_state.correctness.append("Correct")
+                else:
+                    st.session_state.correctness.append(correct_answer)
 
                 # Move to the next question
                 st.session_state.current_question_idx += 1
-                st.rerun()
 
-    # When all questions are answered
+    # After all questions are answered
     if st.session_state.current_question_idx == len(questions):
-        st.write("### Game Over!")
-        for idx, (user_answer, correct_answer) in enumerate(zip(st.session_state.user_answers, st.session_state.correct_answers)):
-            st.write(f"**Question {idx + 1}:** Your answer: {user_answer}, Correct answer: {correct_answer}")
-
-        # Calculate accuracy
-        correct_count = sum(1 for answer in st.session_state.correct_answers if answer == "Correct")
+        st.markdown("### 🎉 Game Over!")
+        correct_count = st.session_state.correctness.count("Correct")
         total_questions = len(questions)
         accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
-        st.write(f"Your accuracy: {correct_count}/{total_questions} ({accuracy:.2f}%)")
 
-        # Option to see explanations for incorrect answers
-        if st.button("See Explanations for Incorrect Answers"):
-            for idx, (user_answer, correct_answer) in enumerate(zip(st.session_state.user_answers, st.session_state.correct_answers)):
-                if user_answer != correct_answer:
-                    st.write(f"**Explanation for Question {idx + 1}:** {st.session_state.explanations[idx]}")
+        st.markdown(f"**Your accuracy:** {correct_count}/{total_questions} ({accuracy:.2f}%)")
+
+        # Button to fetch explanations for incorrect answers
+        if st.button("🔍 See Explanations for Incorrect Answers"):
+            for idx, (user_ans, correctness) in enumerate(zip(st.session_state.user_answers, st.session_state.correctness)):
+                if correctness != "Correct" and idx not in st.session_state.explanations:
+                    # Fetch explanation from the API
+                    explanation = get_explanation(questions[idx], correctness)
+                    st.session_state.explanations[idx] = explanation
+            st.session_state.show_explanations = True  # Set the flag to show explanations
+
+        # Display explanations for incorrect answers
+        for idx, (user_ans, correctness) in enumerate(zip(st.session_state.user_answers, st.session_state.correctness)):
+            if correctness != "Correct":
+                if st.session_state.show_explanations and idx in st.session_state.explanations:
+                    with st.expander(f"Explanation for Question {idx + 1}"):
+                        st.write(st.session_state.explanations[idx])
+                else:
+                    with st.expander(f"Explanation for Question {idx + 1}"):
+                        st.write("Explanation will appear here after you click the button above.")
+
+    st.markdown("**Thank you for playing!**")
 
 if __name__ == "__main__":
     main()
