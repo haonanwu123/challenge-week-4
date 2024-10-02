@@ -1,5 +1,6 @@
 import streamlit as st
 from groq import Groq
+from pygame import mixer
 import re
 
 # Initialize Groq client
@@ -87,7 +88,6 @@ def main():
         st.session_state.correctness = []  # Stores "Correct" or the correct answer
         st.session_state.explanations = {}  # Stores explanations for incorrect answers
         st.session_state.current_question_idx = 0
-        st.session_state.show_explanations = False  # Flag for showing explanations
 
     questions = st.session_state.questions
 
@@ -104,12 +104,9 @@ def main():
 
         if correctness != "Correct":
             # Use an expander to show explanations when available
-            if st.session_state.show_explanations and idx in st.session_state.explanations:
+            if idx in st.session_state.explanations:
                 with st.expander(f"Explanation for Question {idx + 1}"):
                     st.write(st.session_state.explanations[idx])
-            else:
-                with st.expander(f"Explanation for Question {idx + 1}"):
-                    st.write("Explanation will appear here after you click the button below.")
 
     # Display the current question
     if st.session_state.current_question_idx < len(questions):
@@ -146,6 +143,9 @@ def main():
 
         if st.button("Submit Answer"):
             if selected_option:
+                sound = mixer.Sound("submit.mp3")
+                sound.play()
+                
                 # Record the user's answer
                 st.session_state.user_answers.append(selected_option)
 
@@ -155,12 +155,24 @@ def main():
                     st.session_state.correctness.append("Correct")
                 else:
                     st.session_state.correctness.append(correct_answer)
+                    idx = st.session_state.current_question_idx
+                    if idx not in st.session_state.explanations:
+                        # Fetch explanation
+                        explanation = get_explanation(questions[idx], correct_answer)
+                        st.session_state.explanations[idx] = explanation
 
                 # Move to the next question
                 st.session_state.current_question_idx += 1
+                st.rerun()
+                
+        if selected_option:
+            sound = mixer.Sound("option.mp3")
+            sound.play()
 
     # After all questions are answered
     if st.session_state.current_question_idx == len(questions):
+        sound = mixer.Sound("end-game.mp3")
+        sound.play()
         st.markdown("### 🎉 Game Over!")
         correct_count = st.session_state.correctness.count("Correct")
         total_questions = len(questions)
@@ -168,26 +180,7 @@ def main():
 
         st.markdown(f"**Your accuracy:** {correct_count}/{total_questions} ({accuracy:.2f}%)")
 
-        # Button to fetch explanations for incorrect answers
-        if st.button("🔍 See Explanations for Incorrect Answers"):
-            for idx, (user_ans, correctness) in enumerate(zip(st.session_state.user_answers, st.session_state.correctness)):
-                if correctness != "Correct" and idx not in st.session_state.explanations:
-                    # Fetch explanation from the API
-                    explanation = get_explanation(questions[idx], correctness)
-                    st.session_state.explanations[idx] = explanation
-            st.session_state.show_explanations = True  # Set the flag to show explanations
-
-        # Display explanations for incorrect answers
-        for idx, (user_ans, correctness) in enumerate(zip(st.session_state.user_answers, st.session_state.correctness)):
-            if correctness != "Correct":
-                if st.session_state.show_explanations and idx in st.session_state.explanations:
-                    with st.expander(f"Explanation for Question {idx + 1}"):
-                        st.write(st.session_state.explanations[idx])
-                else:
-                    with st.expander(f"Explanation for Question {idx + 1}"):
-                        st.write("Explanation will appear here after you click the button above.")
-
-    st.markdown("**Thank you for playing!**")
+        st.markdown("**Thank you for playing!**")
 
 if __name__ == "__main__":
     main()
