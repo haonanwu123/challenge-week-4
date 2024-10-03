@@ -3,9 +3,13 @@ from groq import Groq
 import time
 from pygame import mixer
 import re
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize Groq client
-client = Groq(api_key="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")  # Replace with your actual API key
+client = Groq(api_key=os.environ['GROQ_API_KEY'])
 
 mixer.init()
 
