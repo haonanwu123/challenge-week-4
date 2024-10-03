@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize Groq client
+# Initialize Groq's client
 client = Groq(api_key=os.environ['GROQ_API_KEY'])
 
 mixer.init()
