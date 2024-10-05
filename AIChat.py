@@ -153,6 +153,7 @@ def get_explanation(question, correct_answer):
     return explanation
 
 def main():
+    st.set_page_config(page_title="Quiz Game")
     st.title("📚 Quiz Game")
 
     # Initialize session state variables
