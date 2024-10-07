@@ -13,18 +13,24 @@ import random
 load_dotenv()
 
 # Initialize Groq client
-client = Groq(api_key=os.environ['GROQ_API_KEY'])
+client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 mixer.init()
 
+
 def generate_topics(num_words):
     response = client.chat.completions.create(
-        messages=[{"role": "user",
-                   "content": f"Your output MUST consist of EXACTLY {num_words} different topics for quiz, separated ONLY by a newline. Don't write something like Here is the output: before, just the words, not numerated"}],
+        messages=[
+            {
+                "role": "user",
+                "content": f"Your output MUST consist of EXACTLY {num_words} different topics for quiz, separated ONLY by a newline. Don't write something like Here is the output: before, just the words, not numerated",
+            }
+        ],
         model="gemma2-9b-it",
     )
-    array = response.choices[0].message.content.split('\n')
+    array = response.choices[0].message.content.split("\n")
     return array[:num_words]
+
 
 def create_frames_and_plot(values, num_segments):
     # Create the initial pie chart
@@ -33,20 +39,24 @@ def create_frames_and_plot(values, num_segments):
     colors = [tuple(c) for c in colors]
 
     # Add the initial pie chart
-    fig.add_trace(go.Pie(
-        labels=values,
-        textinfo='label',
-        hoverinfo='label',
-        marker=dict(colors=colors, line=dict(width=0)),
-        textfont=dict(size=5),
-        showlegend=False,
-        hole=0.05,
-        sort=False,  # Disable sorting to keep fixed positions
-        direction='clockwise',
-    ))
+    fig.add_trace(
+        go.Pie(
+            labels=values,
+            textinfo="label",
+            hoverinfo="label",
+            marker=dict(colors=colors, line=dict(width=0)),
+            textfont=dict(size=5),
+            showlegend=False,
+            hole=0.05,
+            sort=False,  # Disable sorting to keep fixed positions
+            direction="clockwise",
+        )
+    )
 
     # Set the initial rotation angle
-    max_rotation_angle = (lambda x: x + 1 if x % (360 // num_segments) == 0 else x)(random.randint(0, 1080) + 1080)
+    max_rotation_angle = (lambda x: x + 1 if x % (360 // num_segments) == 0 else x)(
+        random.randint(0, 1080) + 1080
+    )
 
     # Create frames for the animation with a decelerating effect
     frames = []
@@ -57,29 +67,41 @@ def create_frames_and_plot(values, num_segments):
         # Apply the easing function (deceleration) to the rotation angle
         angle = (1 - (1 - t) ** 3) * max_rotation_angle
 
-        frames.append(go.Frame(data=[go.Pie(
-            labels=values,
-            textinfo='label',
-            hoverinfo='label',
-            marker=dict(colors=colors, line=dict(width=0)),
-            sort=False,
-            hole=0.05,
-            direction='clockwise',
-            textfont=dict(size=5),
-            showlegend=False,
-            rotation=angle  # Apply the new rotation angle
-        )]))
+        frames.append(
+            go.Frame(
+                data=[
+                    go.Pie(
+                        labels=values,
+                        textinfo="label",
+                        hoverinfo="label",
+                        marker=dict(colors=colors, line=dict(width=0)),
+                        sort=False,
+                        hole=0.05,
+                        direction="clockwise",
+                        textfont=dict(size=5),
+                        showlegend=False,
+                        rotation=angle,  # Apply the new rotation angle
+                    )
+                ]
+            )
+        )
 
     # Update the layout to support frames and add the play button
     fig.frames = frames
 
     # Add an annotation to simulate the pointer/arrow at the top
     fig.add_annotation(
-        x=0.5, y=1.03, showarrow=False, text="▼",
-        font=dict(size=20, color='black'), xref="paper", yref="paper"
+        x=0.5,
+        y=1.03,
+        showarrow=False,
+        text="▼",
+        font=dict(size=20, color="black"),
+        xref="paper",
+        yref="paper",
     )
 
     return fig, frames, max_rotation_angle
+
 
 def generate_questions(num_questions=5):
     """
@@ -88,15 +110,16 @@ def generate_questions(num_questions=5):
     questions = []
     for _ in range(num_questions):
         prompt = f"Ask a multiple choice question about {st.session_state.topic}. Provide options A, B, C, D."
-        
+
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama3-8b-8192",
         )
-        
+
         question = response.choices[0].message.content.strip()
         questions.append(question)
     return questions
+
 
 def is_correct(question, user_answer):
     """
@@ -109,30 +132,35 @@ def is_correct(question, user_answer):
         f"If the answer is correct, output 'Correct'. "
         f"If incorrect, output 'Incorrect' and provide the correct answer."
     )
-    
+
     response = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model="llama3-8b-8192",
     )
-    
+
     outcome = response.choices[0].message.content.strip()
-    
+
     if "Correct" in outcome:
         return True, "Correct"
     else:
         # Attempt to extract the correct answer
         try:
             if "The correct answer is" in outcome:
-                correct_answer = outcome.split("The correct answer is ")[1].split(".")[0].strip()
+                correct_answer = (
+                    outcome.split("The correct answer is ")[1].split(".")[0].strip()
+                )
             elif "the correct answer is" in outcome:
-                correct_answer = outcome.split("the correct answer is ")[1].split(".")[0].strip()
+                correct_answer = (
+                    outcome.split("the correct answer is ")[1].split(".")[0].strip()
+                )
             else:
                 # Handle other possible formats
                 correct_answer = outcome.split(":")[1].split("\n")[0].strip()
         except IndexError:
             correct_answer = "Unknown"
-        
+
         return False, correct_answer
+
 
 def get_explanation(question, correct_answer):
     """
@@ -143,14 +171,15 @@ def get_explanation(question, correct_answer):
         f"The correct answer is: {correct_answer}.\n"
         f"Please provide a detailed explanation for why this is the correct answer."
     )
-    
+
     response = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model="llama3-8b-8192",
     )
-    
+
     explanation = response.choices[0].message.content.strip()
     return explanation
+
 
 def main():
     st.set_page_config(page_title="Quiz Game")
@@ -162,8 +191,8 @@ def main():
         st.session_state.correctness = []  # Stores "Correct" or the correct answer
         st.session_state.explanations = {}  # Stores explanations for incorrect answers
         st.session_state.current_question_idx = 0
-        st.session_state.is_sound_played = [False]*5
-        st.session_state.selected_options = [None]*5
+        st.session_state.is_sound_played = [False] * 5
+        st.session_state.selected_options = [None] * 5
         st.session_state.running = False
 
     if "topics" not in st.session_state:
@@ -174,48 +203,66 @@ def main():
         st.session_state.topics = generate_topics(st.session_state.num_topics)
         st.session_state.topic = None
 
-    if not st.session_state.running: # Determine the topic first
+    if not st.session_state.running:
         if not st.session_state.topic:
             st.subheader("Spin the wheel to get a random topic for a quiz!")
             # Create the animated plot
-            fig, frames, final_angle = create_frames_and_plot(st.session_state.topics, st.session_state.num_topics)
+            fig, frames, final_angle = create_frames_and_plot(
+                st.session_state.topics, st.session_state.num_topics
+            )
 
             # Display the plotly figure
             plot_placeholder = st.empty()
-            plot_placeholder.plotly_chart(fig, config={'displayModeBar': False})
+            plot_placeholder.plotly_chart(fig, config={"displayModeBar": False})
 
             # Streamlit button to trigger animation
-            if st.button('Determine the quiz topic'):
+            if st.button("Determine the quiz topic"):
                 sound = mixer.Sound("audio/spin.mp3")
                 sound.play()
 
                 # Simulate frame updates for animation
                 for frame in frames:
-                    fig = go.Figure(data=frame.data)  # Update figure with each frame's data
+                    fig = go.Figure(
+                        data=frame.data
+                    )  # Update figure with each frame's data
                     fig.add_annotation(
-                        x=0.5, y=1.03, showarrow=False, text="▼",
-                        font=dict(size=20, color='black'), xref="paper", yref="paper"
+                        x=0.5,
+                        y=1.03,
+                        showarrow=False,
+                        text="▼",
+                        font=dict(size=20, color="black"),
+                        xref="paper",
+                        yref="paper",
                     )
-                    plot_placeholder.plotly_chart(fig, config={'displayModeBar': False})  # Render the updated figure
+                    plot_placeholder.plotly_chart(
+                        fig, config={"displayModeBar": False}
+                    )  # Render the updated figure
                     time.sleep(0.03)  # Delay to simulate animation speed
 
-                st.session_state.topic = st.session_state.topics[st.session_state.num_topics - 1 - (final_angle % 360) // (360 // st.session_state.num_topics)]
+                st.session_state.topic = st.session_state.topics[
+                    st.session_state.num_topics
+                    - 1
+                    - (final_angle % 360) // (360 // st.session_state.num_topics)
+                ]
                 st.rerun()
         else:
             st.success(f"The chosen topic is {st.session_state.topic}")
-            if st.button('Start the quiz'):
+            if st.button("Start the quiz"):
                 sound = mixer.Sound("audio/play.mp3")
                 sound.play()
                 st.session_state.running = True
                 st.rerun()
-    else: # Quiz based on chosen topic
+    else:  # Quiz based on chosen topic
         if "questions" not in st.session_state:
             st.session_state.questions = generate_questions()
             st.session_state.start_time = time.time()
             st.session_state.elapsed_time = 0
+
         questions = st.session_state.questions
 
-        st.write("Welcome to the Quiz Game! Answer the following multiple-choice questions:")
+        st.write(
+            "Welcome to the Quiz Game! Answer the following multiple-choice questions:"
+        )
 
         # Display all previously answered questions
         for idx in range(st.session_state.current_question_idx):
@@ -224,7 +271,9 @@ def main():
             correctness = st.session_state.correctness[idx]
 
             st.markdown(f"**Question {idx + 1}:** {question}")
-            st.markdown(f"Your answer: **{user_answer}**, Correct answer: **{correctness}**")
+            st.markdown(
+                f"Your answer: **{user_answer}**, Correct answer: **{correctness}**"
+            )
 
             if correctness != "Correct":
                 # Use an expander to show explanations when available
@@ -242,7 +291,9 @@ def main():
             # Extract options from the question text
             options = re.findall(r"[A-D]\)\s.*", current_question)
             if not options:
-                st.error("Error parsing the question options. Please check the question format.")
+                st.error(
+                    "Error parsing the question options. Please check the question format."
+                )
                 st.stop()
 
             options = [opt.split(")", 1)[1].strip() for opt in options]
@@ -261,37 +312,38 @@ def main():
             selected_option = st.radio(
                 "Choose your answer:",
                 options=option_labels,
-                index= None,
-                format_func=lambda x: f"{x}) {option_dict[x]}"
+                index=None,
+                format_func=lambda x: f"{x}) {option_dict[x]}",
             )
 
             if st.button("Submit Answer"):
-                if selected_option:
+                if not selected_option:
+                    st.warning("Please select an answer before submitting.")
+                else:
                     sound = mixer.Sound("audio/submit.mp3")
                     sound.play()
+
                     # Record the user's answer
                     st.session_state.user_answers.append(selected_option)
 
                     # Check if the answer is correct
-                    correct, correct_answer = is_correct(current_question, selected_option)
+                    correct, correct_answer = is_correct(
+                        current_question, selected_option
+                    )
                     if correct:
                         st.session_state.correctness.append("Correct")
                     else:
                         st.session_state.correctness.append(correct_answer)
                         if current_idx not in st.session_state.explanations:
                             # Fetch explanation
-                            explanation = get_explanation(questions[current_idx], correct_answer)
+                            explanation = get_explanation(
+                                questions[current_idx], correct_answer
+                            )
                             st.session_state.explanations[current_idx] = explanation
 
                     # Move to the next question
                     st.session_state.current_question_idx += 1
                     st.rerun()
-
-            if selected_option and (not st.session_state.is_sound_played[current_idx-1] or selected_option != st.session_state.selected_options):
-                st.session_state.is_sound_played[current_idx-1] = True
-                st.session_state.selected_options = selected_option
-                sound = mixer.Sound("audio/option.mp3")
-                sound.play()
 
         # After all questions are answered
         if st.session_state.current_question_idx == len(questions):
@@ -301,9 +353,13 @@ def main():
             st.markdown("### 🎉 Game Over!")
             correct_count = st.session_state.correctness.count("Correct")
             total_questions = len(questions)
-            accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+            accuracy = (
+                (correct_count / total_questions) * 100 if total_questions > 0 else 0
+            )
 
-            st.markdown(f"**Your accuracy:** {correct_count}/{total_questions} ({accuracy:.2f}%)")
+            st.markdown(
+                f"**Your accuracy:** {correct_count}/{total_questions} ({accuracy:.2f}%)"
+            )
             st.markdown(f"**Total time: {st.session_state.elapsed_time:.1f} seconds**")
             st.markdown("**Thank you for playing!**")
 
@@ -312,6 +368,7 @@ def main():
             st.write(f"Elapsed time: {st.session_state.elapsed_time:.1f} seconds")
             time.sleep(0.1)
             st.rerun()
+
 
 if __name__ == "__main__":
     main()
