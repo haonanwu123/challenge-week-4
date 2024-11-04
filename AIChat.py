@@ -1,6 +1,7 @@
 import streamlit as st
 from groq import Groq
 from pygame import mixer
+import os
 import re
 import numpy as np
 import plotly.graph_objects as go
@@ -8,9 +9,31 @@ import matplotlib.pyplot as plt
 import time
 import random
 
-mixer.init()
+try:
+    mixer.init()
+    audio_available = True
+except Exception as e:
+    audio_available = False
+    st.warning(
+        "The audio device is unavailable and no sound can be played."
+    )  # Audio playback is not supported on the cloud platform
 
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+try:
+    # Try getting the API key from st.secrets
+    api_key = st.secrets["GROQ_API_KEY"]
+    is_cloud = True  # 标记为云环境
+except KeyError:
+    # If not found, use environment variables (local development)
+    from dotenv import load_dotenv
+
+    # Load .env file (local environment)
+    load_dotenv(dotenv_path=".env")
+
+    api_key = os.environ["GROQ_API_KEY"]  # Get the API key from an environment variable
+    is_cloud = False  # Mark as local environment
+
+# Initialize the Groq client
+client = Groq(api_key=api_key)
 
 
 def generate_topics(num_words):
