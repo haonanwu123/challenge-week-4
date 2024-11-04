@@ -2,20 +2,15 @@ import streamlit as st
 from groq import Groq
 from pygame import mixer
 import re
-import os
-from dotenv import load_dotenv
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import time
 import random
 
-load_dotenv()
-
-# Initialize Groq client
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
-
 mixer.init()
+
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
 def generate_topics(num_words):
