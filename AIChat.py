@@ -270,9 +270,16 @@ def main():
             user_answer = st.session_state.user_answers[idx]
             correctness = st.session_state.correctness[idx]
 
+            if correctness == "Correct":
+                answer_text = f":green[{user_answer}]"
+                correctness_text = f":green[{correctness}]"
+            else:
+                answer_text = f":red[{user_answer}]"
+                correctness_text = f":orange[{correctness}]"
+
             st.markdown(f"**Question {idx + 1}:** {question}")
             st.markdown(
-                f"Your answer: **{user_answer}**, Correct answer: **{correctness}**"
+                f"Your answer: **{answer_text}**, Correct answer: **{correctness_text}**"
             )
 
             if correctness != "Correct":
