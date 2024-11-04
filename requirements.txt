@@ -1,0 +1,7 @@
+streamlit
+groq
+pygame
+python-dotenv
+plotly
+matplotlib
+numpy
