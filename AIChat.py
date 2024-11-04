@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import time
 import random
 
-load_dotenv(dotenv_path=".env")
+load_dotenv()
 
 # Initialize Groq client
 client = Groq(api_key=os.environ["GROQ_API_KEY"])
