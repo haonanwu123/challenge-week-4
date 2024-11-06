@@ -19,4 +19,9 @@ Welkom bij **"De Kennisuitdaging"**! Dit is een leuk AI-kennisquizspel, speciaal
 - Brede kennisbasis, met geschiedenis, personen en weinig bekende feitjes.
 - Onmiddellijke feedback, de AI geeft je uitleg bij elk juist antwoord.
 
+
+
+## Url van ons app:
+[QuizGame](https://huggingface.co/spaces/Megakari/Quiz)
+
 Veel succes, en begin met surfen!
