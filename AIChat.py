@@ -175,44 +175,41 @@ def generate_questions(num_questions=5):
 
 def is_correct(question, user_answer):
     """
-    Checks if the user's answer is correct.
-    Returns a tuple (is_correct: bool, correct_answer: str).
-    """
-    prompt = (
-        f"Question: {question}\n"
-        f"My answer: {user_answer}\n"
-        f"If the answer is correct, output 'Correct'. "
-        f"If incorrect, output 'Incorrect' and provide the correct answer."
-    )
+    Check if the user's answer is correct using Groq LLM.
 
-    response = client.chat.completions.create(
+    Args:
+        question (str): The full question text including all answer options
+        user_answer (str): User's answer (single uppercase letter A, B, C, or D)
+
+    Returns:
+        tuple (is_correct: bool, correct_answer: str)
+    """
+
+    # Create the prompt for the LLM
+    prompt = f"""
+    Question: {question}
+    
+    Please provide ONLY a single uppercase letter (A, B, C, or D) representing the correct answer. 
+    Do not provide any explanation or additional text.
+    """
+
+    # Make API call to Groq
+    chat_completion = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model="llama3-8b-8192",
         temperature=0.5,
+        max_tokens=1
     )
 
-    outcome = response.choices[0].message.content.strip()
+    # Extract the correct answer
+    correct_answer = chat_completion.choices[0].message.content.strip()
 
-    if "Correct" in outcome:
-        return True, "Correct"
-    else:
-        # Attempt to extract the correct answer
-        try:
-            if "The correct answer is" in outcome:
-                correct_answer = (
-                    outcome.split("The correct answer is ")[1].split(".")[0].strip()
-                )
-            elif "the correct answer is" in outcome:
-                correct_answer = (
-                    outcome.split("the correct answer is ")[1].split(".")[0].strip()
-                )
-            else:
-                # Handle other possible formats
-                correct_answer = outcome.split(":")[1].split("\n")[0].strip()
-        except IndexError:
-            correct_answer = "Unknown"
+    # Validate LLM response
+    if correct_answer[0] not in ['A', 'B', 'C', 'D']:
+        return False, 'Unknown'
 
-        return False, correct_answer
+    # Compare answers
+    return user_answer == correct_answer, correct_answer
 
 
 def get_explanation(question, correct_answer):
