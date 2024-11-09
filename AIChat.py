@@ -18,6 +18,58 @@ client = Groq(api_key=os.environ["GROQ_API_KEY"])
 mixer.init()
 
 
+def is_valid_topic(topic):
+    """
+    Validate if the topic is coherent using Groq API
+    Returns: tuple (is_valid, message)
+    """
+    prompt = f"""
+    Analyze if the following topic is a coherent subject for a quiz: "{topic}"
+    Only respond with either "VALID" if it's a real topic (like "history", "python programming", "ancient egypt", etc.)
+    or "INVALID" if it's gibberish, random characters, or not a real topic.
+    Response:
+    """
+
+    try:
+        completion = client.chat.completions.create(
+            model="gemma2-9b-it",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0,
+            max_tokens=10
+        )
+        response = completion.choices[0].message.content.strip()
+        return response == "VALID", "" if response == "VALID" else "Please enter a real topic."
+    except Exception as e:
+        return False, f"Error validating topic: {str(e)}"
+
+
+def get_valid_custom_topic():
+    """Get and validate topic input from user"""
+    topic = st.text_input("Enter your quiz topic:")
+
+    if topic:
+        # Basic preprocessing
+        topic = topic.strip()
+
+        # Basic client-side validation
+        if len(topic) < 2:
+            st.error("Topic must be at least 2 characters long.")
+            return None
+
+        if re.match(r'^[0-9\W]+$', topic):  # Only numbers or special characters
+            st.error("Topic cannot be just numbers or special characters.")
+            return None
+
+        is_valid, message = is_valid_topic(topic)
+
+        if is_valid:
+            return topic
+        else:
+            st.error(message)
+            return None
+
 def generate_topics(num_words):
     response = client.chat.completions.create(
         messages=[
@@ -136,6 +188,7 @@ def is_correct(question, user_answer):
     response = client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model="llama3-8b-8192",
+        temperature=0.5,
     )
 
     outcome = response.choices[0].message.content.strip()
@@ -195,16 +248,25 @@ def main():
         st.session_state.selected_options = [None] * 5
         st.session_state.running = False
 
-    if "topics" not in st.session_state:
         # Wheel properties
         num_segments = [3, 4, 5, 6, 8, 9, 10, 12, 15, 18, 20, 24, 30]
 
         st.session_state.num_topics = random.choice(num_segments)
         st.session_state.topics = generate_topics(st.session_state.num_topics)
+        st.session_state.custom_topic = False
         st.session_state.topic = None
 
     if not st.session_state.running:
-        if not st.session_state.topic:
+        if st.session_state.custom_topic:
+            st.session_state.topic = get_valid_custom_topic()
+        if st.session_state.topic:
+            st.success(f"The chosen topic is {st.session_state.topic}")
+            if st.button("Start the quiz"):
+                sound = mixer.Sound("audio/play.mp3")
+                sound.play()
+                st.session_state.running = True
+                st.rerun()
+        elif not st.session_state.custom_topic:
             st.subheader("Spin the wheel to get a random topic for a quiz!")
             # Create the animated plot
             fig, frames, final_angle = create_frames_and_plot(
@@ -215,43 +277,47 @@ def main():
             plot_placeholder = st.empty()
             plot_placeholder.plotly_chart(fig, config={"displayModeBar": False})
 
-            # Streamlit button to trigger animation
-            if st.button("Determine the quiz topic"):
-                sound = mixer.Sound("audio/spin.mp3")
-                sound.play()
+            # Create two columns
+            col1, col2, col3 = st.columns([2, 1.2, 1])
 
-                # Simulate frame updates for animation
-                for frame in frames:
-                    fig = go.Figure(
-                        data=frame.data
-                    )  # Update figure with each frame's data
-                    fig.add_annotation(
-                        x=0.5,
-                        y=1.03,
-                        showarrow=False,
-                        text="▼",
-                        font=dict(size=20, color="black"),
-                        xref="paper",
-                        yref="paper",
-                    )
-                    plot_placeholder.plotly_chart(
-                        fig, config={"displayModeBar": False}
-                    )  # Render the updated figure
-                    time.sleep(0.03)  # Delay to simulate animation speed
+            # Place the buttons in separate columns to align them in the same row
+            with col2:
+                st.write('or')
+            with col3:
+                if st.button("🔒 Custom topic"):
+                    st.session_state.custom_topic = True
+                    st.rerun()
+            with col1:
+                # Streamlit button to trigger animation
+                if st.button("Determine the quiz topic"):
+                    sound = mixer.Sound("audio/spin.mp3")
+                    sound.play()
 
-                st.session_state.topic = st.session_state.topics[
-                    st.session_state.num_topics
-                    - 1
-                    - (final_angle % 360) // (360 // st.session_state.num_topics)
-                ]
-                st.rerun()
-        else:
-            st.success(f"The chosen topic is {st.session_state.topic}")
-            if st.button("Start the quiz"):
-                sound = mixer.Sound("audio/play.mp3")
-                sound.play()
-                st.session_state.running = True
-                st.rerun()
+                    # Simulate frame updates for animation
+                    for frame in frames:
+                        fig = go.Figure(
+                            data=frame.data
+                        )  # Update figure with each frame's data
+                        fig.add_annotation(
+                            x=0.5,
+                            y=1.03,
+                            showarrow=False,
+                            text="▼",
+                            font=dict(size=20, color="black"),
+                            xref="paper",
+                            yref="paper",
+                        )
+                        plot_placeholder.plotly_chart(
+                            fig, config={"displayModeBar": False}
+                        )  # Render the updated figure
+                        time.sleep(0.03)  # Delay to simulate animation speed
+
+                    st.session_state.topic = st.session_state.topics[
+                        st.session_state.num_topics
+                        - 1
+                        - (final_angle % 360) // (360 // st.session_state.num_topics)
+                    ]
+                    st.rerun()
     else:  # Quiz based on chosen topic
         if "questions" not in st.session_state:
             st.session_state.questions = generate_questions()
@@ -351,6 +417,13 @@ def main():
                     # Move to the next question
                     st.session_state.current_question_idx += 1
                     st.rerun()
+
+            if selected_option and (not st.session_state.is_sound_played[
+                current_idx - 1] or selected_option != st.session_state.selected_options):
+                st.session_state.is_sound_played[current_idx - 1] = True
+                st.session_state.selected_options = selected_option
+                sound = mixer.Sound("audio/option.mp3")
+                sound.play()
 
         # After all questions are answered
         if st.session_state.current_question_idx == len(questions):
