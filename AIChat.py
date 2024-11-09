@@ -161,7 +161,11 @@ def generate_questions(num_questions=5):
     """
     questions = []
     for _ in range(num_questions):
-        prompt = f"Ask a multiple choice question about {st.session_state.topic}. Provide options A, B, C, D."
+        prompt = (
+            f"Ask a multiple choice question about {st.session_state.topic}. "
+            f"Provide options A, B, C, D. Make sure it's different from these "
+            f"existing questions: {questions}"
+        )
 
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
