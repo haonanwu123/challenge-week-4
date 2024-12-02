@@ -1,6 +1,6 @@
 # Audio handling functions
 from pygame import mixer
-from src.config import AUDIO_PATHS
+from config import AUDIO_PATHS
 
 
 class AudioService:

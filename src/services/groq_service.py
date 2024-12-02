@@ -1,5 +1,5 @@
 # Groq API related functions
-from src.config import GROQ_CLIENT
+from config import GROQ_CLIENT
 
 
 def validate_topic(topic):

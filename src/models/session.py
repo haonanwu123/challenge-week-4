@@ -2,7 +2,7 @@
 import streamlit as st
 import random
 import time
-from src.services.groq_service import generate_questions, generate_topics
+from services.groq_service import generate_questions, generate_topics
 
 class SessionState:
     @staticmethod
