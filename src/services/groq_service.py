@@ -24,6 +24,8 @@ def validate_topic(topic):
             max_tokens=10
         )
         response = completion.choices[0].message.content.strip()
+        if len(topic) <= 2:
+            response = "INVALID"
         return response == "VALID", "" if response == "VALID" else "Please enter a real topic."
     except Exception as e:
         return False, f"Error validating topic: {str(e)}"
@@ -39,7 +41,7 @@ def generate_topics(num_topics):
         messages=[
             {
                 "role": "user",
-                "content": f"Your output MUST consist of EXACTLY {num_topics} different topics for quiz, separated ONLY by a newline. Don't write something like Here is the output: before, just the words, not numerated",
+                "content": f"Your output MUST consist of EXACTLY {num_topics+5} different topics for quiz, separated ONLY by a newline. Don't write something like Here is the output: before, just the words, not numerated",
             }
         ],
         model="gemma2-9b-it",
