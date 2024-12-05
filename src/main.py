@@ -165,7 +165,6 @@ def main():
 
         # After all questions are answered
         if st.session_state.current_question_idx == len(questions):
-            st.session_state.running = False
             st.session_state.elapsed_time = time.time() - st.session_state.start_time
             audio.play_sound('end_game')
             st.markdown("### 🎉 Game Over!")
@@ -180,8 +179,10 @@ def main():
             )
             st.markdown(f"**Total time: {st.session_state.elapsed_time:.1f} seconds**")
             st.markdown("**Thank you for playing!**")
-
-        if st.session_state.running:
+            SessionState.reset()
+            if st.button("Play Again"):
+                st.rerun()
+        elif st.session_state.running:
             st.session_state.elapsed_time = time.time() - st.session_state.start_time
             st.write(f"Elapsed time: {st.session_state.elapsed_time:.1f} seconds")
             time.sleep(0.1)

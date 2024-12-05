@@ -39,3 +39,9 @@ class SessionState:
         if "questions" not in st.session_state:
             st.session_state.questions = generate_questions(st.session_state.topic)
             st.session_state.start_time = time.time()
+
+    @staticmethod
+    def reset():
+        """Reset session state for a new game"""
+        for key in st.session_state.keys():
+            del st.session_state[key]

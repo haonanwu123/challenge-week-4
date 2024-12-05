@@ -69,17 +69,6 @@ class SpinningWheel:
         # Update the layout to support frames and add the play button
         fig.frames = frames
 
-        # Add an annotation to simulate the pointer/arrow at the top
-        fig.add_annotation(
-            x=0.5,
-            y=1.03,
-            showarrow=False,
-            text="▼",
-            font=dict(size=20, color="black"),
-            xref="paper",
-            yref="paper",
-        )
-
         return fig, frames, max_rotation_angle
 
 
@@ -98,6 +87,7 @@ class SpinningWheel:
     def initialize_wheel(self, topics, num_topics):
         # Create the animated plot
         fig, frames, final_angle = self.create_frames_and_plot(topics, num_topics)
+        self.add_pointer_to_figure(fig)
         # Display the plotly figure
         self.plot_placeholder = st.empty()
         self.plot_placeholder.plotly_chart(fig, config={"displayModeBar": False})
