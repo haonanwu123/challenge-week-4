@@ -24,8 +24,6 @@ def validate_topic(topic):
             max_tokens=10
         )
         response = completion.choices[0].message.content.strip()
-        if len(topic) <= 2:
-            response = "INVALID"
         return response == "VALID", "" if response == "VALID" else "Please enter a real topic."
     except Exception as e:
         return False, f"Error validating topic: {str(e)}"

@@ -26,7 +26,7 @@ class TestGroqService:
         test_cases = [
             "asdfghjk",
             "123456",
-            ""
+            "but"
         ]
         for topic in test_cases:
             is_valid, result = validate_topic(topic)
